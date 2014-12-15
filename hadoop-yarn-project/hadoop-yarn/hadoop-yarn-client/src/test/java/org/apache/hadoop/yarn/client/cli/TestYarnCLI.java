@@ -1152,6 +1152,8 @@ public class TestYarnCLI {
     pw.println("\tMemory-Capacity : 0MB");
     pw.println("\tCPU-Used : 0 vcores");
     pw.println("\tCPU-Capacity : 0 vcores");
+    pw.println("\tDisk-I/O-Used : 0 vdisks");
+    pw.println("\tDisk-I/O-Capacity : 0 vdisks");
     pw.println("\tNode-Labels : a,b,c,x,y,z");
     pw.close();
     String nodeStatusStr = baos.toString("UTF-8");
@@ -1186,6 +1188,8 @@ public class TestYarnCLI {
     pw.println("\tMemory-Capacity : 0MB");
     pw.println("\tCPU-Used : 0 vcores");
     pw.println("\tCPU-Capacity : 0 vcores");
+    pw.println("\tDisk-I/O-Used : 0 vdisks");
+    pw.println("\tDisk-I/O-Capacity : 0 vdisks");
     pw.println("\tNode-Labels : ");
     pw.close();
     String nodeStatusStr = baos.toString("UTF-8");

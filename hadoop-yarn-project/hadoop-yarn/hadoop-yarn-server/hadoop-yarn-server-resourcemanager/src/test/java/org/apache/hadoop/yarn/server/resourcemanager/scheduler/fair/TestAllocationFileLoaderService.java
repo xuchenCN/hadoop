@@ -232,9 +232,9 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
-    assertEquals(Resources.createResource(1024, 0),
+    assertEquals(Resources.createResource(1024, 0, 0),
         queueConf.getMinResources("root.queueA"));
-    assertEquals(Resources.createResource(2048, 0),
+    assertEquals(Resources.createResource(2048, 0, 0),
         queueConf.getMinResources("root.queueB"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueC"));
@@ -405,9 +405,9 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
 
-    assertEquals(Resources.createResource(1024, 0),
+    assertEquals(Resources.createResource(1024, 0, 0),
         queueConf.getMinResources("root.queueA"));
-    assertEquals(Resources.createResource(2048, 0),
+    assertEquals(Resources.createResource(2048, 0, 0),
         queueConf.getMinResources("root.queueB"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueC"));

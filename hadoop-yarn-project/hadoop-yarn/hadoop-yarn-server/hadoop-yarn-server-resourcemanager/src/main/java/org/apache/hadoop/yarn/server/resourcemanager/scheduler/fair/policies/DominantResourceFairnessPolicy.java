@@ -96,10 +96,15 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
     int queueAvailableCPU =
         Math.max(queueFairShare.getVirtualCores() - queueUsage
             .getVirtualCores(), 0);
+    int queueAvailableVDisks =
+        Math.max(queueFairShare.getVirtualDisks() - queueUsage
+            .getVirtualDisks(), 0);
     Resource headroom = Resources.createResource(
         Math.min(clusterAvailable.getMemory(), queueAvailableMemory),
         Math.min(clusterAvailable.getVirtualCores(),
-            queueAvailableCPU));
+            queueAvailableCPU),
+        Math.min(clusterAvailable.getVirtualDisks(),
+            queueAvailableVDisks));
     return headroom;
   }
 
@@ -174,14 +179,37 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
           (pool.getMemory() * weights.getWeight(MEMORY)));
       shares.setWeight(CPU, (float)resource.getVirtualCores() /
           (pool.getVirtualCores() * weights.getWeight(CPU)));
+      shares.setWeight(DISKIO, (float)resource.getVirtualDisks() /
+          (pool.getVirtualDisks() * weights.getWeight(DISKIO)));
       // sort order vector by resource share
       if (resourceOrder != null) {
         if (shares.getWeight(MEMORY) > shares.getWeight(CPU)) {
-          resourceOrder[0] = MEMORY;
-          resourceOrder[1] = CPU;
+          if (shares.getWeight(MEMORY) > shares.getWeight(DISKIO)) {
+            resourceOrder[0] = MEMORY;
+            if (shares.getWeight(CPU) > shares.getWeight(DISKIO)) {
+              resourceOrder[1] = CPU;
+              resourceOrder[2] = DISKIO;
+            }
+          } else {
+            resourceOrder[0] = DISKIO;
+            resourceOrder[1] = MEMORY;
+            resourceOrder[2] = CPU;
+          }
         } else  {
-          resourceOrder[0] = CPU;
-          resourceOrder[1] = MEMORY;
+          if (shares.getWeight(CPU) > shares.getWeight(DISKIO)) {
+            resourceOrder[0] = CPU;
+            if (shares.getWeight(MEMORY) > shares.getWeight(DISKIO)) {
+              resourceOrder[1] = MEMORY;
+              resourceOrder[2] = DISKIO;
+            } else {
+              resourceOrder[1] = DISKIO;
+              resourceOrder[2] = MEMORY;
+            }
+          } else {
+            resourceOrder[0] = DISKIO;
+            resourceOrder[1] = CPU;
+            resourceOrder[2] = MEMORY;
+          }
         }
       }
     }

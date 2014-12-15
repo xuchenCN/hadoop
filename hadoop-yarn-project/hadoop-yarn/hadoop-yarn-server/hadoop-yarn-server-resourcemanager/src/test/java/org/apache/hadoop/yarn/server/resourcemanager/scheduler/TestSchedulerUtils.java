@@ -94,9 +94,9 @@ public class TestSchedulerUtils {
     
     final int minMemory = 1024;
     final int maxMemory = 8192;
-    Resource minResource = Resources.createResource(minMemory, 0);
-    Resource maxResource = Resources.createResource(maxMemory, 0);
-    
+    Resource minResource = Resources.createResource(minMemory, 0, 0);
+    Resource maxResource = Resources.createResource(maxMemory, 0, 0);
+
     ResourceRequest ask = new ResourceRequestPBImpl();
 
     // case negative memory
@@ -155,33 +155,35 @@ public class TestSchedulerUtils {
   public void testNormalizeRequestWithDominantResourceCalculator() {
     ResourceCalculator resourceCalculator = new DominantResourceCalculator();
     
-    Resource minResource = Resources.createResource(1024, 1);
-    Resource maxResource = Resources.createResource(10240, 10);
-    Resource clusterResource = Resources.createResource(10 * 1024, 10);
+    Resource minResource = Resources.createResource(1024, 1, 1);
+    Resource maxResource = Resources.createResource(10240, 10, 8);
+    Resource clusterResource = Resources.createResource(10 * 1024, 10, 8);
     
     ResourceRequest ask = new ResourceRequestPBImpl();
 
-    // case negative memory/vcores
-    ask.setCapability(Resources.createResource(-1024, -1));
+    // case negative memory/vcores/vdisks
+    ask.setCapability(Resources.createResource(-1024, -1, -1));
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource, maxResource);
     assertEquals(minResource, ask.getCapability());
 
-    // case zero memory/vcores
-    ask.setCapability(Resources.createResource(0, 0));
+    // case zero memory/vcores/vdisks
+    ask.setCapability(Resources.createResource(0, 0, 0));
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource, maxResource);
     assertEquals(minResource, ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(1024, ask.getCapability().getMemory());
+    assertEquals(1, ask.getCapability().getVirtualDisks());
 
-    // case non-zero memory & zero cores
-    ask.setCapability(Resources.createResource(1536, 0));
+    // case non-zero memory & zero cores & zero vdisks
+    ask.setCapability(Resources.createResource(1536, 0, 0));
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource, maxResource);
-    assertEquals(Resources.createResource(2048, 1), ask.getCapability());
+    assertEquals(Resources.createResource(2048, 1, 1), ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(2048, ask.getCapability().getMemory());
+    assertEquals(1, ask.getCapability().getVirtualDisks());
   }
   
   @Test (timeout = 30000)
@@ -347,13 +349,15 @@ public class TestSchedulerUtils {
     Resource maxResource =
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_DISK_VDISKS);
 
     // zero memory
     try {
       Resource resource =
           Resources.createResource(0,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -367,7 +371,8 @@ public class TestSchedulerUtils {
     try {
       Resource resource =
           Resources.createResource(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -377,12 +382,27 @@ public class TestSchedulerUtils {
       fail("Zero vcores should be accepted");
     }
 
+    // zero vdisks
+    try {
+      Resource resource = Resources.createResource(
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+          0);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.validateResourceRequest(resReq, maxResource, null,
+          mockScheduler);
+    } catch (InvalidResourceRequestException e) {
+      fail("Zero vdisks should be accepted");
+    }
+
     // max memory
     try {
       Resource resource =
           Resources.createResource(
               YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -397,7 +417,8 @@ public class TestSchedulerUtils {
       Resource resource =
           Resources.createResource(
               YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -407,11 +428,26 @@ public class TestSchedulerUtils {
       fail("Max vcores should not be accepted");
     }
 
+    // max vdisks
+    try {
+      Resource resource = Resources.createResource(
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_DISK_VDISKS);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.validateResourceRequest(resReq, maxResource, null,
+          mockScheduler);
+    } catch (InvalidResourceRequestException e) {
+      fail("Max vdisks should not be accepted");
+    }
+
     // negative memory
     try {
       Resource resource =
           Resources.createResource(-1,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -426,7 +462,8 @@ public class TestSchedulerUtils {
     try {
       Resource resource =
           Resources.createResource(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, -1);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, -1,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -437,12 +474,28 @@ public class TestSchedulerUtils {
       // expected
     }
 
+    // negative vdisks
+    try {
+      Resource resource = Resources.createResource(
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+          -1);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.validateResourceRequest(resReq, maxResource, null,
+          mockScheduler);
+      fail("Negative vdisks should not be accepted");
+    } catch (InvalidResourceRequestException e) {
+      // expected
+    }
+
     // more than max memory
     try {
       Resource resource =
           Resources.createResource(
               YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB + 1,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -459,13 +512,29 @@ public class TestSchedulerUtils {
           Resources
               .createResource(
                   YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES + 1);
+                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES + 1,
+                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
       SchedulerUtils.validateResourceRequest(resReq, maxResource, null,
           mockScheduler);
       fail("More than max vcores should not be accepted");
+    } catch (InvalidResourceRequestException e) {
+      // expected
+    }
+
+    // more than max vcores
+    try {
+      Resource resource = Resources.createResource(
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_DISK_VDISKS + 1);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.validateResourceRequest(resReq, maxResource, null,
+          mockScheduler);
+      fail("More than max vdisks should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
     }

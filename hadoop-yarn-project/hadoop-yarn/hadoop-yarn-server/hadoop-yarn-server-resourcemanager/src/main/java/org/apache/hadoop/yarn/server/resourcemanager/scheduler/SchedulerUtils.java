@@ -190,7 +190,7 @@ public class SchedulerUtils {
 
   /**
    * Utility method to validate a resource request, by insuring that the
-   * requested memory/vcore is non-negative and not greater than max
+   * requested memory/vcore/vdisks is non-negative and not greater than max
    * 
    * @throws <code>InvalidResourceRequestException</code> when there is invalid
    *         request
@@ -216,7 +216,17 @@ public class SchedulerUtils {
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
     }
-    
+    if (resReq.getCapability().getVirtualDisks() < 0 ||
+        resReq.getCapability().getVirtualDisks() >
+        maximumResource.getVirtualDisks()) {
+      throw new InvalidResourceRequestException("Invalid resource request"
+          + ", requested virtual disks < 0"
+          + ", or requested virtual disks > max configured"
+          + ", requestedVirtualDisks="
+          + resReq.getCapability().getVirtualDisks()
+          + ", maxVirtualDisks=" + maximumResource.getVirtualDisks());
+    }
+
     // Get queue from scheduler
     QueueInfo queueInfo = null;
     try {

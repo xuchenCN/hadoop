@@ -29,8 +29,13 @@ public class ResourceWeights {
   private float[] weights = new float[ResourceType.values().length];
 
   public ResourceWeights(float memoryWeight, float cpuWeight) {
+    this(memoryWeight, cpuWeight, 0);
+  }
+
+  public ResourceWeights(float memoryWeight, float cpuWeight, float vdiskWeight) {
     weights[ResourceType.MEMORY.ordinal()] = memoryWeight;
     weights[ResourceType.CPU.ordinal()] = cpuWeight;
+    weights[ResourceType.DISKIO.ordinal()] = vdiskWeight;
   }
 
   public ResourceWeights(float weight) {

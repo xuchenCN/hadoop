@@ -160,7 +160,14 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB = 1024;
   public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES =
       YARN_PREFIX + "scheduler.minimum-allocation-vcores";
-    public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES = 1;
+  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES = 1;
+  /** Now we limit the vdisks for each container as 1. This will be updated
+   *  once we support the various vdisks requests. */
+  @Private
+  public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS =
+      YARN_PREFIX + "scheduler.minimum-allocation-disk-vdisks";
+  @Private
+  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS = 1;
 
   /** Maximum request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
@@ -169,6 +176,11 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES =
       YARN_PREFIX + "scheduler.maximum-allocation-vcores";
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES = 4;
+  @Private
+  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_DISK_VDISKS =
+      YARN_PREFIX + "scheduler.maximum-allocation-disk-vdisks";
+  @Private
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_DISK_VDISKS = 1;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
@@ -794,6 +806,12 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
       100;
   
+  /** Number of virtual disk I/O resources which can be allocated for containers. */
+  @Private
+  public static final String NM_DISK_VDISKS = NM_PREFIX + "resource.disk-vdisks";
+  @Private
+  public static final int DEFAULT_NM_DISK_VDISKS = 20;
+
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
   public static final int DEFAULT_NM_WEBAPP_PORT = 8042;

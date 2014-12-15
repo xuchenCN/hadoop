@@ -50,6 +50,7 @@ public class MockNM {
   private NodeId nodeId;
   private final int memory;
   private final int vCores;
+  private final int vDisks;
   private ResourceTrackerService resourceTracker;
   private final int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
@@ -65,14 +66,33 @@ public class MockNM {
   }
 
   public MockNM(String nodeIdStr, int memory, int vcores,
+                ResourceTrackerService resourceTracker) {
+    // scale vdisks based on the requested memory
+    this(nodeIdStr, memory, vcores,
+        Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_DISK_VDISKS) /
+            YarnConfiguration.DEFAULT_NM_PMEM_MB),
+        resourceTracker);
+  }
+
+  public MockNM(String nodeIdStr, int memory, int vcores, int vdisks,
       ResourceTrackerService resourceTracker) {
-    this(nodeIdStr, memory, vcores, resourceTracker, YarnVersionInfo.getVersion());
+    this(nodeIdStr, memory, vcores, vdisks, resourceTracker,
+        YarnVersionInfo.getVersion());
   }
 
   public MockNM(String nodeIdStr, int memory, int vcores,
       ResourceTrackerService resourceTracker, String version) {
+    this(nodeIdStr, memory, vcores,
+        Math.max(1, (memory * YarnConfiguration.DEFAULT_NM_DISK_VDISKS) /
+            YarnConfiguration.DEFAULT_NM_PMEM_MB),
+        resourceTracker, version);
+  }
+
+  public MockNM(String nodeIdStr, int memory, int vcores, int vDisks,
+      ResourceTrackerService resourceTracker, String version) {
     this.memory = memory;
     this.vCores = vcores;
+    this.vDisks = vDisks;
     this.resourceTracker = resourceTracker;
     this.version = version;
     String[] splits = nodeIdStr.split(":");
@@ -115,7 +135,7 @@ public class MockNM {
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
     req.setHttpPort(httpPort);
-    Resource resource = BuilderUtils.newResource(memory, vCores);
+    Resource resource = Resource.newInstance(memory, vCores, vDisks);
     req.setResource(resource);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
@@ -197,5 +217,9 @@ public class MockNM {
 
   public int getvCores() {
     return vCores;
+  }
+
+  public int getVDisks() {
+    return vDisks;
   }
 }

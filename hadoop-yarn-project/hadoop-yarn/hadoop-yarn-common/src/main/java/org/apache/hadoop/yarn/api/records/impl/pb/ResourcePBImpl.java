@@ -80,10 +80,25 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
+  public int getVirtualDisks() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getVirtualDisks());
+  }
+
+  @Override
+  public void setVirtualDisks(int vDisks) {
+    maybeInitBuilder();
+    builder.setVirtualDisks((vDisks));
+  }
+
+  @Override
   public int compareTo(Resource other) {
     int diff = this.getMemory() - other.getMemory();
     if (diff == 0) {
       diff = this.getVirtualCores() - other.getVirtualCores();
+      if (diff == 0) {
+        diff = this.getVirtualDisks() - other.getVirtualDisks();
+      }
     }
     return diff;
   }

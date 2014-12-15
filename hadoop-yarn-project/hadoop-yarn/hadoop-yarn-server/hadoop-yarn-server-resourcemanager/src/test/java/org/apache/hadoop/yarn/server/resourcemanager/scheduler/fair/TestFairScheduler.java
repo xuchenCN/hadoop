@@ -197,7 +197,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             5000);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
-    conf.setInt(FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB, 
+    conf.setInt(FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
       128);
     scheduler.init(conf);
     scheduler.start();
@@ -2822,6 +2822,47 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testNoMoreVDisksOnNode() throws IOException {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 2, 2),
+        1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 2, 1),
+        1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, 1, 1, "default",
+        "user1", 2, 1);
+    FSAppAttempt app1 = scheduler.getSchedulerApp(attId1);
+    scheduler.update();
+
+    // For node1, it has enough resources for running two containers
+    NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(updateEvent1);
+    assertEquals(1, app1.getLiveContainers().size());
+    scheduler.handle(updateEvent1);
+    assertEquals(2, app1.getLiveContainers().size());
+
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, 1, 1, "default",
+        "user1", 2, 1);
+    FSAppAttempt app2 = scheduler.getSchedulerApp(attId2);
+    scheduler.update();
+
+    // For node2, it can only run one container as it only has 1 vDisk.
+    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
+    scheduler.handle(updateEvent2);
+    assertEquals(1, app2.getLiveContainers().size());
+    scheduler.handle(updateEvent2);
+    assertEquals(1, app2.getLiveContainers().size());
+  }
+
+  @Test
   public void testBasicDRFAssignment() throws Exception {
     scheduler.init(conf);
     scheduler.start();
@@ -3455,6 +3496,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     Configuration conf = createConfiguration();
     conf.setBoolean(FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
             true);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_DISK_VDISKS, 0);
     scheduler.setRMContext(resourceManager.getRMContext());
     scheduler.init(conf);
     scheduler.start();
@@ -3510,7 +3552,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Wait until app gets resources
     while (app.getCurrentConsumption()
-            .equals(Resources.createResource(1024, 1))) { }
+            .equals(Resources.createResource(1024, 1, 0))) { }
 
     Assert.assertEquals(2048, app.getCurrentConsumption().getMemory());
     Assert.assertEquals(2, app.getCurrentConsumption().getVirtualCores());

@@ -394,6 +394,64 @@ public class TestCapacityScheduler {
     conf.setMaximumCapacity(A, -1);
     assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
   }
+
+  @Test
+  public void testNoMoreVDisksOnNode() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class.getName());
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    // Create two nodes, one with 2 vDisks, and one with 1 vDisks
+    RMNode node1 =
+        MockNodes.newNodeInfo(0, Resource.newInstance(4 * GB, 2, 2), 1, "host1");
+    RMNode node2 =
+        MockNodes.newNodeInfo(0, Resource.newInstance(4 * GB, 2, 1), 1, "host2");
+    cs.handle(new NodeAddedSchedulerEvent(node1));
+    cs.handle(new NodeAddedSchedulerEvent(node2));
+
+    // Create one application
+    ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
+    ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
+        appId1, 1);
+    SchedulerEvent addAppEvent1 =
+        new AppAddedSchedulerEvent(appId1, "default", "user");
+    cs.handle(addAppEvent1);
+    SchedulerEvent addAttemptEvent1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
+    cs.handle(addAttemptEvent1);
+
+    // Request four containers
+    List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
+    ResourceRequest request1 = ResourceRequest.newInstance(
+        Priority.newInstance(1), ResourceRequest.ANY,
+        Resource.newInstance(1024, 1, 1), 4, true);
+    ask1.add(request1);
+    cs.allocate(appAttemptId1, ask1, Collections.<ContainerId>emptyList(),
+        null, null);
+
+    // For node1, it has 2 vdisks, thus it can assign two containers
+    FiCaSchedulerApp app1 = cs.getApplicationAttempt(appAttemptId1);
+    Assert.assertEquals(0, app1.getLiveContainers().size());
+    NodeUpdateSchedulerEvent nodeUpdateEvent = new NodeUpdateSchedulerEvent(node1);
+    cs.handle(nodeUpdateEvent);
+    Assert.assertEquals(1, app1.getLiveContainers().size());
+    cs.handle(nodeUpdateEvent);
+    Assert.assertEquals(2, app1.getLiveContainers().size());
+
+    // For node2, it only has 1 vdisks, thus it can only assign one container
+    NodeUpdateSchedulerEvent nodeUpdateEvent2 = new NodeUpdateSchedulerEvent(node2);
+    cs.handle(nodeUpdateEvent2);
+    Assert.assertEquals(3, app1.getLiveContainers().size());
+    cs.handle(nodeUpdateEvent2);
+    Assert.assertEquals(3, app1.getLiveContainers().size());
+
+    rm.stop();
+  }
   
   
   @Test
@@ -1035,8 +1093,8 @@ public class TestCapacityScheduler {
 
     // check values
     waitForAppPreemptionInfo(app0,
-        Resource.newInstance(CONTAINER_MEMORY * 3, 3), 0, 3,
-        Resource.newInstance(CONTAINER_MEMORY * 3, 3), false, 3);
+        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3), 0, 3,
+        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3), false, 3);
 
     // kill app0-attempt0 AM container
     cs.killContainer(schedulerAppAttempt.getRMContainer(app0
@@ -1047,7 +1105,7 @@ public class TestCapacityScheduler {
 
     // check values
     waitForAppPreemptionInfo(app0,
-        Resource.newInstance(CONTAINER_MEMORY * 4, 4), 1, 3,
+        Resource.newInstance(CONTAINER_MEMORY * 4, 4, 4), 1, 3,
         Resource.newInstance(0, 0), false, 0);
 
     // launch app0-attempt1
@@ -1065,8 +1123,8 @@ public class TestCapacityScheduler {
 
     // check values
     waitForAppPreemptionInfo(app0,
-        Resource.newInstance(CONTAINER_MEMORY * 7, 7), 1, 6,
-        Resource.newInstance(CONTAINER_MEMORY * 3, 3), false, 3);
+        Resource.newInstance(CONTAINER_MEMORY * 7, 7, 7), 1, 6,
+        Resource.newInstance(CONTAINER_MEMORY * 3, 3, 3), false, 3);
 
     rm1.stop();
   }

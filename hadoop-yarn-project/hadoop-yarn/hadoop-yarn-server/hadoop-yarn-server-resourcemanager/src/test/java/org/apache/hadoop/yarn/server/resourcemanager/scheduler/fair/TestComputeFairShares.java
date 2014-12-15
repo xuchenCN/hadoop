@@ -177,19 +177,19 @@ public class TestComputeFairShares {
    */
   @Test
   public void testCPU() {
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 20),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 20, 0),
         new ResourceWeights(2.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 0),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 0, 0),
         new ResourceWeights(1.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 5),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 5, 0),
         new ResourceWeights(1.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 15),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 15, 0),
         new ResourceWeights(0.5f)));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(0, 45), ResourceType.CPU);
+        Resources.createResource(0, 45, 0), ResourceType.CPU);
     verifyCPUShares(20, 5, 5, 15);
   }
-  
+
   /**
    * Check that a given list of shares have been assigned to this.scheds.
    */
@@ -199,7 +199,7 @@ public class TestComputeFairShares {
       Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getMemory());
     }
   }
-  
+
   /**
    * Check that a given list of shares have been assigned to this.scheds.
    */

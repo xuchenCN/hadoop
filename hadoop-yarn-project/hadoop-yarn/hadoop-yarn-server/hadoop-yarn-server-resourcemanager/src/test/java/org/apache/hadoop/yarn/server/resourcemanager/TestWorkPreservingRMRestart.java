@@ -227,7 +227,7 @@ public class TestWorkPreservingRMRestart {
     // 2 running containers.
     Resource usedResources = Resources.multiply(containerResource, 2);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getVDisks());
 
     assertTrue(schedulerNode1.isValidContainer(amContainer.getContainerId()));
     assertTrue(schedulerNode1.isValidContainer(runningContainer
@@ -348,7 +348,7 @@ public class TestWorkPreservingRMRestart {
       Resource availableResources) throws Exception {
     // waiting for RM's scheduling apps
     int retry = 0;
-    Resource assumedFairShare = Resource.newInstance(8192, 8);
+    Resource assumedFairShare = Resource.newInstance(8192, 8, 20);
     while (true) {
       Thread.sleep(100);
       if (assumedFairShare.equals(((FairScheduler)rm.getResourceScheduler())
@@ -525,7 +525,7 @@ public class TestWorkPreservingRMRestart {
     // Calculate each queue's resource usage.
     Resource containerResource = Resource.newInstance(1024, 1);
     Resource nmResource =
-        Resource.newInstance(nm1.getMemory(), nm1.getvCores());
+        Resource.newInstance(nm1.getMemory(), nm1.getvCores(), nm1.getVDisks());
     Resource clusterResource = Resources.multiply(nmResource, 2);
     Resource q1Resource = Resources.multiply(clusterResource, 0.5);
     Resource q2Resource = Resources.multiply(clusterResource, 0.5);

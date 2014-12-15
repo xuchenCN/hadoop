@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -54,9 +55,16 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Stable
   public static Resource newInstance(int memory, int vCores) {
+    return newInstance(memory, vCores, 0);
+  }
+
+  @Private
+  @Evolving
+  public static Resource newInstance(int memory, int vCores, int vDisks) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
+    resource.setVirtualDisks(vDisks);
     return resource;
   }
 
@@ -105,12 +113,31 @@ public abstract class Resource implements Comparable<Resource> {
   @Evolving
   public abstract void setVirtualCores(int vCores);
 
+  /**
+   * Get <em>number of virtual disk I/O</em> of the resource.
+   *
+   * @return <em>number of virtual disk I/O</em> of the resource
+   */
+  @Private
+  @Evolving
+  public abstract int getVirtualDisks();
+
+  /**
+   * Set <em>number of virtual disk I/O</em> of the resource.
+   *
+   * @param vDisks <em>number of virtual disk I/O</em> of the resource
+   */
+  @Private
+  @Evolving
+  public abstract void setVirtualDisks(int vDisks);
+
   @Override
   public int hashCode() {
     final int prime = 263167;
     int result = 3571;
     result = 939769357 + getMemory(); // prime * result = 939769357 initially
     result = prime * result + getVirtualCores();
+    result = prime * result + getVirtualDisks();
     return result;
   }
 
@@ -124,7 +151,8 @@ public abstract class Resource implements Comparable<Resource> {
       return false;
     Resource other = (Resource) obj;
     if (getMemory() != other.getMemory() || 
-        getVirtualCores() != other.getVirtualCores()) {
+        getVirtualCores() != other.getVirtualCores() ||
+        getVirtualDisks() != other.getVirtualDisks()) {
       return false;
     }
     return true;
@@ -132,6 +160,7 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ">";
+    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores()
+        + ", vDisks:" + getVirtualDisks() + ">";
   }
 }

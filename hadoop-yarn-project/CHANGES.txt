@@ -32,6 +32,11 @@ Trunk - Unreleased
 
     YARN-2525. yarn logs command gives error on trunk (Akira AJISAKA via aw)
 
+YARN-2139 - Not merged
+
+    YARN-2168. [YARN-2139] Avoid over-allocation of disk resources. 
+    (Wei Yan via kasha)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
