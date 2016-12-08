@@ -755,7 +755,7 @@ public class DataNode extends ReconfigurableBase
     // the DN is started by JSVC, pass it along.
     ServerSocketChannel httpServerChannel = secureResources != null ?
         secureResources.getHttpServerChannel() : null;
-
+    //Http相关Server
     this.httpServer = new DatanodeHttpServer(conf, this, httpServerChannel);
     httpServer.start();
     if (httpServer.getHttpAddress() != null) {
@@ -887,20 +887,25 @@ public class DataNode extends ReconfigurableBase
   private void initDataXceiver(Configuration conf) throws IOException {
     // find free port or use privileged port provided
     TcpPeerServer tcpPeerServer;
+    //初始化TcpPeerServer,即ServerSocket的一层封装
     if (secureResources != null) {
       tcpPeerServer = new TcpPeerServer(secureResources);
     } else {
       tcpPeerServer = new TcpPeerServer(dnConf.socketWriteTimeout,
           DataNode.getStreamingAddr(conf));
     }
+    //默认值为 1024 * 1024 
     tcpPeerServer.setReceiveBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
     streamingAddr = tcpPeerServer.getStreamingAddr();
     LOG.info("Opened streaming server at " + streamingAddr);
     this.threadGroup = new ThreadGroup("dataXceiverServer");
+    //DataXceiverServer实现了Runnable
     xserver = new DataXceiverServer(tcpPeerServer, conf, this);
+    //Deamon是Thread封装默认会setDaemon(true)
     this.dataXceiverServer = new Daemon(threadGroup, xserver);
     this.threadGroup.setDaemon(true); // auto destroy when empty
 
+    //DomainSocket相关
     if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
               DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT) ||
         conf.getBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
@@ -1074,7 +1079,8 @@ public class DataNode extends ReconfigurableBase
 
     this.spanReceiverHost =
       SpanReceiverHost.get(conf, DFSConfigKeys.DFS_SERVER_HTRACE_PREFIX);
-
+    
+    //使用内存映射形式来存储数据
     if (dnConf.maxLockedMemory > 0) {
       if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
         throw new RuntimeException(String.format(
@@ -1104,8 +1110,11 @@ public class DataNode extends ReconfigurableBase
     
     // global DN settings
     registerMXBean();
+    //初始化相关Socket，重要
     initDataXceiver(conf);
+    //Http相关的Server启动
     startInfoServer(conf);
+    //JVM监控线程，用来判断GC的停顿时间，有info,warn两种threshold决定GC时间的输出日志级别
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
   
@@ -2250,6 +2259,7 @@ public class DataNode extends ReconfigurableBase
       printUsage(System.err);
       return null;
     }
+    //将conf中的配置封装成StorageLocation对象
     Collection<StorageLocation> dataLocations = getStorageLocations(conf);
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFS_DATANODE_KEYTAB_FILE_KEY,
@@ -2360,10 +2370,14 @@ public class DataNode extends ReconfigurableBase
     FsPermission permission = new FsPermission(
         conf.get(DFS_DATANODE_DATA_DIR_PERMISSION_KEY,
                  DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
+    
+    //DataNodeDiskChecker 会检查目录是否被创建，如果没有会mkdir以及父目录
     DataNodeDiskChecker dataNodeDiskChecker =
         new DataNodeDiskChecker(permission);
+    //这里会将invalid的StorageLocation过滤掉 ，只留下验证正确的
     List<StorageLocation> locations =
         checkStorageLocations(dataDirs, localFS, dataNodeDiskChecker);
+    //Metrics相关
     DefaultMetricsSystem.initialize("DataNode");
 
     assert locations.size() > 0 : "number of data directories should be > 0";

@@ -112,10 +112,11 @@ class DataXceiverServer implements Runnable {
     this.peerServer = peerServer;
     this.datanode = datanode;
     
+    //最大连接数默认 4096
     this.maxXceiverCount = 
       conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
                   DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
-    
+    //预计block大小 默认128M
     this.estimateBlockSize = conf.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
     

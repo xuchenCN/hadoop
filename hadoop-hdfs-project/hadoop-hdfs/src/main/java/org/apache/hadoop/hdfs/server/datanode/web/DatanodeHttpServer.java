@@ -89,9 +89,9 @@ public class DatanodeHttpServer implements Closeable {
         .hostName(getHostnameForSpnegoPrincipal(confForInfoServer))
         .addEndpoint(URI.create("http://localhost:0"))
         .setFindPort(true);
-
+    
     this.infoServer = builder.build();
-
+    //以下Servlet为入口点，需要时直接查看
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
         FileChecksumServlets.GetServlet.class);
@@ -100,13 +100,13 @@ public class DatanodeHttpServer implements Closeable {
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",
                                BlockScanner.Servlet.class);
-
+    //组织WebContext 初始化Connector,获得监听端口号等操作
     this.infoServer.start();
     final InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);
 
     this.confForCreate = new Configuration(conf);
     confForCreate.set(FsPermission.UMASK_LABEL, "000");
-
+    //初始化Netty相关
     this.bossGroup = new NioEventLoopGroup();
     this.workerGroup = new NioEventLoopGroup();
     this.externalHttpChannel = externalHttpChannel;
@@ -180,6 +180,7 @@ public class DatanodeHttpServer implements Closeable {
 
   public void start() {
     if (httpServer != null) {
+      //Netty启动 默认绑定地址 0.0.0.0:500
       ChannelFuture f = httpServer.bind(DataNode.getInfoAddr(conf));
       f.syncUninterruptibly();
       httpAddress = (InetSocketAddress) f.channel().localAddress();
