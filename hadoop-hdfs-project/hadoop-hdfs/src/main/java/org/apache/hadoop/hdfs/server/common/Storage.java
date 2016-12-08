@@ -470,14 +470,17 @@ public abstract class Storage extends StorageInfo {
       boolean hadMkdirs = false;
       String rootPath = root.getCanonicalPath();
       try { // check that storage exists
+        //目录是否存在
         if (!root.exists()) {
           // storage directory does not exist
+          //目录不存在是否是-format -hotswap启动
           if (startOpt != StartupOption.FORMAT &&
               startOpt != StartupOption.HOTSWAP) {
             LOG.warn("Storage directory " + rootPath + " does not exist");
             return StorageState.NON_EXISTENT;
           }
           LOG.info(rootPath + " does not exist. Creating ...");
+          //创建目录
           if (!root.mkdirs())
             throw new IOException("Cannot create directory " + rootPath);
           hadMkdirs = true;
@@ -495,7 +498,8 @@ public abstract class Storage extends StorageInfo {
         LOG.warn("Cannot access storage directory " + rootPath, ex);
         return StorageState.NON_EXISTENT;
       }
-
+      
+      //会在root目录下生成锁文件
       this.lock(); // lock storage if it exists
 
       // If startOpt is HOTSWAP, it returns NOT_FORMATTED for empty directory,

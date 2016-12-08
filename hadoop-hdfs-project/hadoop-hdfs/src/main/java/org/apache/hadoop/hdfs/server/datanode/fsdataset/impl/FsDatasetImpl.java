@@ -270,17 +270,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     String[] dataDirs = conf.getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
     Collection<StorageLocation> dataLocations = DataNode.getStorageLocations(conf);
+    // 将之前初始化后可用的目录与配置的全部目录进行一个对比，返回初始化后不再配置中的目录
     List<VolumeFailureInfo> volumeFailureInfos = getInitialVolumeFailureInfos(
         dataLocations, storage);
 
     int volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
     int volsFailed = volumeFailureInfos.size();
     this.validVolsRequired = volsConfigured - volFailuresTolerated;
-
+    
+    //Tolerate 是否配置的正确
     if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
       throw new DiskErrorException("Invalid volume failure "
           + " config value: " + volFailuresTolerated);
     }
+    //大于 Tolerate 的目录坏掉无法启动
     if (volsFailed > volFailuresTolerated) {
       throw new DiskErrorException("Too many failed volumes - "
           + "current valid volumes: " + storage.getNumStorageDirs() 
@@ -292,7 +295,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     storageMap = new ConcurrentHashMap<String, DatanodeStorage>();
     volumeMap = new ReplicaMap(this);
     ramDiskReplicaTracker = RamDiskReplicaTracker.getInstance(conf, this);
-
+    
+    // Volume选举器 当前两种，Available , RoundRobin
     @SuppressWarnings("unchecked")
     final VolumeChoosingPolicy<FsVolumeImpl> blockChooserImpl =
         ReflectionUtils.newInstance(conf.getClass(
@@ -301,6 +305,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
         blockChooserImpl);
+    // 一个异步的Service 用一个ThreadGroup将disk操作异步处理
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode);
     deletingBlock = new HashMap<String, Set<Long>>();
@@ -355,12 +360,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private void addVolume(Collection<StorageLocation> dataLocations,
       Storage.StorageDirectory sd) throws IOException {
     final File dir = sd.getCurrentDir();
+    // 为了获得StorageType 做了一次循环。。。
     final StorageType storageType =
         getStorageTypeFromLocations(dataLocations, sd.getRoot());
 
     // If IOException raises from FsVolumeImpl() or getVolumeMap(), there is
     // nothing needed to be rolled back to make various data structures, e.g.,
     // storageMap and asyncDiskService, consistent.
+    // 初始化FsVolume，里边还有一个DF,和一个线程池
     FsVolumeImpl fsVolume = new FsVolumeImpl(
         this, sd.getStorageUuid(), dir, this.conf, storageType);
     FsVolumeReference ref = fsVolume.obtainReference();

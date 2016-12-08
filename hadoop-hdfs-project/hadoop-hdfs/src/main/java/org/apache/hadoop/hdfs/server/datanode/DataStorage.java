@@ -261,6 +261,7 @@ public class DataStorage extends Storage {
       throws IOException {
     StorageDirectory sd = new StorageDirectory(dataDir, null, false);
     try {
+      // 该方法会判断出root目录的状态
       StorageState curState = sd.analyzeStorage(startOpt, this);
       // sd is locked but not opened
       switch (curState) {
@@ -274,6 +275,7 @@ public class DataStorage extends Storage {
         LOG.info("Storage directory " + dataDir + " is not formatted for "
             + nsInfo.getBlockPoolID());
         LOG.info("Formatting ...");
+        // clear 然后写入 VERSION信息
         format(sd, nsInfo, datanode.getDatanodeUuid());
         break;
       default:  // recovery part is common
@@ -369,6 +371,7 @@ public class DataStorage extends Storage {
       if (!containsStorageDir(root)) {
         try {
           // It first ensures the datanode level format is completed.
+          // 格式化，创建文件，检查Version等操作
           StorageDirectory sd = loadStorageDirectory(
               datanode, nsInfo, root, startOpt);
           addStorageDir(sd);
@@ -384,6 +387,7 @@ public class DataStorage extends Storage {
       bpDataDirs.add(BlockPoolSliceStorage.getBpRoot(bpid, new File(root,
               STORAGE_DIR_CURRENT)));
       try {
+        // 创建并检查BP文件夹
         makeBlockPoolDataDir(bpDataDirs, null);
         BlockPoolSliceStorage bpStorage = this.bpStorageMap.get(bpid);
         if (bpStorage == null) {
@@ -391,7 +395,7 @@ public class DataStorage extends Storage {
               nsInfo.getNamespaceID(), bpid, nsInfo.getCTime(),
               nsInfo.getClusterID());
         }
-
+        // 增加的目录为 /root/current/BP-xxx/
         bpStorage.recoverTransitionRead(datanode, nsInfo, bpDataDirs, startOpt);
         addBlockPoolStorage(bpid, bpStorage);
       } catch (IOException e) {
@@ -473,7 +477,9 @@ public class DataStorage extends Storage {
       // mark DN storage is initialized
       this.initialized = true;
     }
-
+    // 一系列的操作都在里边
+    // 格式化，版本检查，等等操作 会在storageDirs中加入数据
+    // 会在bpStorageMap中加入数据
     if (addStorageLocations(datanode, nsInfo, dataDirs, startOpt).isEmpty()) {
       throw new IOException("All specified directories are failed to load.");
     }

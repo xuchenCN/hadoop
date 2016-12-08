@@ -93,6 +93,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -425,11 +426,13 @@ public class DataNode extends ReconfigurableBase
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
+      //初始化的一些工作，重要
       startDataNode(conf, dataDirs, resources);
     } catch (IOException ie) {
       shutdown();
       throw ie;
     }
+    // Google的一个Cache实现，使用WeakReference or SoftReference
     final int dncCacheMaxSize =
         conf.getInt(DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY,
             DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT) ;
@@ -784,6 +787,9 @@ public class DataNode extends ReconfigurableBase
         conf.getTrimmed(DFS_DATANODE_IPC_ADDRESS_KEY));
     
     // Add all the RPC protocols that the Datanode implements    
+    // 设置所有PB的Service
+    
+    // ClientService
     RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
     ClientDatanodeProtocolServerSideTranslatorPB clientDatanodeProtocolXlator = 
@@ -800,13 +806,15 @@ public class DataNode extends ReconfigurableBase
                 DFS_DATANODE_HANDLER_COUNT_DEFAULT)).setVerbose(false)
         .setSecretManager(blockPoolTokenSecretManager).build();
     
+    // InterDatanodeService
     InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
         new InterDatanodeProtocolServerSideTranslatorPB(this);
     service = InterDatanodeProtocolService
         .newReflectiveBlockingService(interDatanodeProtocolXlator);
     DFSUtil.addPBProtocol(conf, InterDatanodeProtocolPB.class, service,
         ipcServer);
-
+    
+    //  TraceAdminService
     TraceAdminProtocolServerSideTranslatorPB traceAdminXlator =
         new TraceAdminProtocolServerSideTranslatorPB(this);
     BlockingService traceAdminService = TraceAdminService
@@ -1125,17 +1133,26 @@ public class DataNode extends ReconfigurableBase
     dnUserName = UserGroupInformation.getCurrentUser().getShortUserName();
     LOG.info("dnUserName = " + dnUserName);
     LOG.info("supergroup = " + supergroup);
+    
+    // 初始化protobuf相关服务
     initIpcServer(conf);
-
+    
+    // Metrics相关
     metrics = DataNodeMetrics.create(conf, getDisplayName());
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
     
     blockPoolManager = new BlockPoolManager(this);
+    // Nameservice配置 数据结构为 : map(nameserviceId to map(namenodeId to InetSocketAddress))
+    // 根据此数据结构来确定构造BPOfferService来与NN进行Communication
+    // 此方法会出发启动新的BPOfferService,与关闭不需要的BPOfferService
+    // 重要方法
     blockPoolManager.refreshNamenodes(conf);
 
     // Create the ReadaheadPool from the DataNode context so we can
     // exit without having to explicitly shutdown its thread pool.
     readaheadPool = ReadaheadPool.getInstance();
+    
+    //接受DFSClient请求与Pipline发送给其他Datanode时需要用到
     saslClient = new SaslDataTransferClient(dnConf.conf, 
         dnConf.saslPropsResolver, dnConf.trustedChannelResolver);
     saslServer = new SaslDataTransferServer(dnConf, blockPoolTokenSecretManager);
@@ -1364,6 +1381,7 @@ public class DataNode extends ReconfigurableBase
       final String bpid = nsInfo.getBlockPoolID();
       //read storage info, lock data dirs and transition fs state if necessary
       synchronized (this) {
+        // 重要方法，进行目录的初始化工作
         storage.recoverTransitionRead(this, nsInfo, dataDirs, startOpt);
       }
       final StorageInfo bpStorage = storage.getBPStorage(bpid);
@@ -1373,10 +1391,12 @@ public class DataNode extends ReconfigurableBase
     }
 
     // If this is a newly formatted DataNode then assign a new DatanodeUuid.
+    // 如果是新创建的DN，会在所有dir下写入信息
     checkDatanodeUuid();
 
     synchronized(this)  {
       if (data == null) {
+        // #FsDatasetImpl.FsDatasetImpl()
         data = factory.newInstance(this, storage, conf);
       }
     }
@@ -2311,8 +2331,10 @@ public class DataNode extends ReconfigurableBase
   @InterfaceAudience.Private
   public static DataNode createDataNode(String args[], Configuration conf,
       SecureResources resources) throws IOException {
+    // 初始化操作 重要
     DataNode dn = instantiateDataNode(args, conf, resources);
     if (dn != null) {
+      // 运行相关 重要
       dn.runDatanodeDaemon();
     }
     return dn;

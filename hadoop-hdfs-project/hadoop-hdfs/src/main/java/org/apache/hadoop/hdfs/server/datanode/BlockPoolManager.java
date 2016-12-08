@@ -200,11 +200,14 @@ class BlockPoolManager {
         for (String nsToAdd : toAdd) {
           ArrayList<InetSocketAddress> addrs =
             Lists.newArrayList(addrMap.get(nsToAdd).values());
+          // BPOfferService里封装了这些地址对应的BPServiceActor,
+          // BPServiceActor是一个线程类,封装了一个Scheduler类，用来控制heartbeat & blockreport
           BPOfferService bpos = createBPOS(addrs);
           bpByNameserviceId.put(nsToAdd, bpos);
           offerServices.add(bpos);
         }
       }
+      //重要方法
       startAll();
     }
 
