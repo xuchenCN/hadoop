@@ -309,12 +309,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode);
     deletingBlock = new HashMap<String, Set<Long>>();
-
+    
+    // 初始化 FSValumeImpls 重要方法
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       addVolume(dataLocations, storage.getStorageDir(idx));
     }
+    
+    // lazyPersist功能
     setupAsyncLazyPersistThreads();
-
+    
+    // cache相关
     cacheManager = new FsDatasetCache(this);
 
     // Start the lazy writer once we have built the replica maps.
@@ -367,9 +371,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // If IOException raises from FsVolumeImpl() or getVolumeMap(), there is
     // nothing needed to be rolled back to make various data structures, e.g.,
     // storageMap and asyncDiskService, consistent.
-    // 初始化FsVolume，里边还有一个DF,和一个线程池
+    // 初始化FsVolume，里边还有一个DF封装了(df -k -P 命令 来查看使用量挂载点等),和一个线程池
     FsVolumeImpl fsVolume = new FsVolumeImpl(
         this, sd.getStorageUuid(), dir, this.conf, storageType);
+    // 该方法返回FsVolumeImpl.FsVolumeReference对象，其会调用FsVolumeImpl.reference方法
+    // 其原理是reference时将int数据incr操作，unreference时decr操作，close时会 | STATUS_CLOSED_MASK
     FsVolumeReference ref = fsVolume.obtainReference();
     ReplicaMap tempVolumeMap = new ReplicaMap(this);
     fsVolume.getVolumeMap(tempVolumeMap, ramDiskReplicaTracker);

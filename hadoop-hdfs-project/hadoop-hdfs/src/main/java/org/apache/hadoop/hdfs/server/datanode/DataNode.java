@@ -1396,7 +1396,7 @@ public class DataNode extends ReconfigurableBase
 
     synchronized(this)  {
       if (data == null) {
-        // #FsDatasetImpl.FsDatasetImpl()
+        // 会调用FsDatasetImpl.FsDatasetImpl()构造方法，有许多初始化功能，重要方法
         data = factory.newInstance(this, storage, conf);
       }
     }
