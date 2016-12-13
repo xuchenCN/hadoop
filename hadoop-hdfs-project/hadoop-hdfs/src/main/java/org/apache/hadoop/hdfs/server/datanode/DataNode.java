@@ -1142,6 +1142,9 @@ public class DataNode extends ReconfigurableBase
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
     
     blockPoolManager = new BlockPoolManager(this);
+    // 内部会调用BPOfferService->BPActorService.run()
+    // 与NN通讯获得VERSION等信息，随后initBlockPool
+    // 此过程会初始化许多核心模块
     // Nameservice配置 数据结构为 : map(nameserviceId to map(namenodeId to InetSocketAddress))
     // 根据此数据结构来确定构造BPOfferService来与NN进行Communication
     // 此方法会出发启动新的BPOfferService,与关闭不需要的BPOfferService
@@ -1353,7 +1356,8 @@ public class DataNode extends ReconfigurableBase
     // Exclude failed disks before initializing the block pools to avoid startup
     // failures.
     checkDiskError();
-
+    
+    // 会初始化BlockPoolSlice并且将Volume加入到BlockScanner中
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
     initDirectoryScanner(conf);

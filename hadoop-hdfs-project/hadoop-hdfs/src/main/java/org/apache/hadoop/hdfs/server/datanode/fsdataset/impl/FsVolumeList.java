@@ -238,6 +238,7 @@ class FsVolumeList {
       for(Iterator<FsVolumeImpl> i = volumeList.iterator(); i.hasNext(); ) {
         final FsVolumeImpl fsv = i.next();
         try (FsVolumeReference ref = fsv.obtainReference()) {
+          // 这里调用 Valume里的BlockPoolSlice.checkDirs
           fsv.checkDirs();
         } catch (DiskErrorException e) {
           FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ", e);
