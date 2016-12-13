@@ -1346,6 +1346,8 @@ public class DataNode extends ReconfigurableBase
     
     // In the case that this is the first block pool to connect, initialize
     // the dataset, block scanners, etc.
+    // 初始化FsDatasetImpl，并且构造了相应目录的FsVolumeImpl类
+    // 重要方法
     initStorage(nsInfo);
 
     // Exclude failed disks before initializing the block pools to avoid startup

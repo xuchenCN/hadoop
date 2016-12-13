@@ -796,6 +796,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   void getVolumeMap(ReplicaMap volumeMap,
                     final RamDiskReplicaTracker ramDiskReplicaMap)
       throws IOException {
+    // 跟到这里发现bpSlices并没有在之前设置过数据，但是却调用了这个方法，
+    // 后边还会调用FsDatasetImpl的addBlockPool方法，还会调用这个逻辑
     for(BlockPoolSlice s : bpSlices.values()) {
       s.getVolumeMap(volumeMap, ramDiskReplicaMap);
     }
