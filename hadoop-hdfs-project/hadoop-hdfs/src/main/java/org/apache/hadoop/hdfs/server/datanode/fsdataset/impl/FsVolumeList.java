@@ -421,6 +421,7 @@ class FsVolumeList {
     }
     for (Thread t : blockPoolAddingThreads) {
       try {
+        // 等待所有BlockPoolSlice初始化完成
         t.join();
       } catch (InterruptedException ie) {
         throw new IOException(ie);

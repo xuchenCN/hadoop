@@ -96,6 +96,7 @@ class BlockPoolSlice {
     this.bpid = bpid;
     this.volume = volume;
     this.currentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT); 
+    // finalizedDir 存放已经写完成的block文件
     this.finalizedDir = new File(
         currentDir, DataStorage.STORAGE_DIR_FINALIZED);
     this.lazypersistDir = new File(currentDir, DataStorage.STORAGE_DIR_LAZY_PERSIST);
@@ -118,6 +119,7 @@ class BlockPoolSlice {
     if (tmpDir.exists()) {
       FileUtil.fullyDelete(tmpDir);
     }
+    // rbw 存放正在写入的文件
     this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
     final boolean supportAppends = conf.getBoolean(
         DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
@@ -137,6 +139,9 @@ class BlockPoolSlice {
     }
     // Use cached value initially if available. Or the following call will
     // block until the initial du command completes.
+    
+    // 运行命令为 "du", "-sk", dirPath
+    // 默认执行间隔 600000
     this.dfsUsage = new DU(bpDir, conf, loadDfsUsed());
     this.dfsUsage.start();
 
@@ -146,6 +151,7 @@ class BlockPoolSlice {
         @Override
         public void run() {
           if (!dfsUsedSaved) {
+            // 存放dfsUsage数据 两个long类型 第一个是使用量，第二个是时间戳
             saveDfsUsed();
           }
         }

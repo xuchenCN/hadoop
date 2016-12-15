@@ -2501,7 +2501,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     LOG.info("Adding block pool " + bpid);
     synchronized(this) {
+      // 初始化 BlockPoolSlice 并设置到所有的Volume上
       volumes.addBlockPool(bpid, conf);
+      // 初始化了一个map 存放 bpid - ReplicaInfo
       volumeMap.initBlockPool(bpid);
     }
     volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
