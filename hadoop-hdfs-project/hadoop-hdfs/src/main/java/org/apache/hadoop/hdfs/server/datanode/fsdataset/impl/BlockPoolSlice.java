@@ -324,7 +324,8 @@ class BlockPoolSlice {
       FsDatasetImpl.LOG.info(
           "Recovered " + numRecovered + " replicas from " + lazypersistDir);
     }
-
+    
+    // 查找构建所有文件夹下边的block文件，形成replica对象存放在volumeMap中
     // add finalized replicas
     addToReplicasMap(volumeMap, finalizedDir, lazyWriteReplicaMap, true);
     // add rbw replicas
@@ -429,12 +430,21 @@ class BlockPoolSlice {
                         final RamDiskReplicaTracker lazyWriteReplicaMap,
                         boolean isFinalized)
       throws IOException {
+    
+    // Finalized（已完成），
+    // Rbw（Replica Being Written，传输中），
+    // Rwr（Replica Waiting ro be Recovered，等待还原），
+    // Rur（Replica Under Recovery，还原中），
+    // Temporary（临时）。
+    // from https://my.oschina.net/ghly/blog/175140
     File files[] = FileUtil.listFiles(dir);
     for (File file : files) {
       if (file.isDirectory()) {
+        // 如果是subdir 则继续查找
         addToReplicasMap(volumeMap, file, lazyWriteReplicaMap, isFinalized);
       }
-
+      
+      // 判断是否是.unlink结尾的文件
       if (isFinalized && FsDatasetUtil.isUnlinkTmpFile(file)) {
         file = recoverTempUnlinkedBlock(file);
         if (file == null) { // the original block still exists, so we cover it
@@ -442,18 +452,23 @@ class BlockPoolSlice {
           continue;
         }
       }
+      // 判断是否是block文件或者meta文件
       if (!Block.isBlockFilename(file))
         continue;
       
+      // 查找meta文件，来获得genStamp , 例如 blk_1073741833,blk_1073741833_1009.meta
+      // genStamp应该为1099
       long genStamp = FsDatasetUtil.getGenerationStampFromFile(
           files, file);
+      // 获得blockId
       long blockId = Block.filename2id(file.getName());
+      // 构造ReplicaInfo对象
       ReplicaInfo newReplica = null;
+      // 如果是finalized block 构造FinalizedReplica，说明该block已经处理完成在finallized文件夹中
       if (isFinalized) {
         newReplica = new FinalizedReplica(blockId, 
             file.length(), genStamp, volume, file.getParentFile());
       } else {
-
         boolean loadRwr = true;
         File restartMeta = new File(file.getParent()  +
             File.pathSeparator + "." + file.getName() + ".restart");
@@ -496,6 +511,14 @@ class BlockPoolSlice {
       } else {
         // We have multiple replicas of the same block so decide which one
         // to keep.
+        
+        // 发现重复的replica file,
+        // 若deleteDuplicateReplicas = true 则删除其中一个
+        // 留下的规则是
+        // 1.genStamp较大的
+        // 2.若genStamp相同，留下length of bytes较大的
+        // 3.若大小相同留下persistent的 volume，（RAM->DISK->ARCHIVE）
+        // 4.都相同留replica1
         newReplica = resolveDuplicateReplicas(newReplica, oldReplica, volumeMap);
       }
 
