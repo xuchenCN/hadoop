@@ -1359,7 +1359,11 @@ public class DataNode extends ReconfigurableBase
     
     // 会初始化BlockPoolSlice并且将Volume加入到BlockScanner中
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
+    // 会调用所有VolumeScaner的enableBlockPoolId
+    // 将读取或者创建新的BlockIterator用于定期扫描block
+    // 如果发现有问题的block会向NN进行reportBadBlock操作
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
+    // 初始化DirectoryScanner,用来扫描本地文件与FsDataset的差异
     initDirectoryScanner(conf);
   }
 

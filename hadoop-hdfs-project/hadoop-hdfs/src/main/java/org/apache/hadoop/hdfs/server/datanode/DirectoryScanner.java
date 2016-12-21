@@ -314,7 +314,8 @@ public class DirectoryScanner implements Runnable {
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT);
-    scanPeriodMsecs = interval * 1000L; //msec
+    // 默认6小时
+    scanPeriodMsecs = interval * 1000L; //msec 
     int threads = 
         conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                     DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT);
@@ -359,6 +360,8 @@ public class DirectoryScanner implements Runnable {
       }
 
       //We're are okay to run - do it
+      // 查找FsDataset中的所有对象与实际disk上的是否匹配，如果不匹配进行更新
+      // 如果最终结果无法fix将发送badBlockReport
       reconcile();      
       
     } catch (Exception e) {

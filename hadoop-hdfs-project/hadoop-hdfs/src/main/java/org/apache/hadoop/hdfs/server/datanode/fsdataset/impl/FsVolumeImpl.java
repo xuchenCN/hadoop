@@ -556,7 +556,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
               state.curFinalizedDir).toFile();
       return getNextSubDir(state.curFinalizedSubDir, dir);
     }
-
+    
+    // 如果没有达到maxStalenessMs 这回使用cache里的数据
     private List<String> getSubdirEntries() throws IOException {
       if (state.curFinalizedSubDir == null) {
         return null; // There are no entries in the null subdir.
@@ -623,6 +624,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         return null;
       }
       try {
+        // 扫描每个subdir下的文件，如果是最后一个则选择下一个subdir
         while (true) {
           List<String> entries = getSubdirEntries();
           if (entries != null) {

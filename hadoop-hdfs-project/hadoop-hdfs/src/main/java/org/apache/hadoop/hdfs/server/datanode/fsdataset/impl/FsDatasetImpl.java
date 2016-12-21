@@ -387,6 +387,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               DatanodeStorage.State.NORMAL,
               storageType));
       asyncDiskService.addVolume(sd.getCurrentDir());
+      // 这里会向BlockScaner 添加 VolumeScanner
       volumes.addVolume(ref);
     }
 
@@ -2503,9 +2504,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     synchronized(this) {
       // 初始化 BlockPoolSlice 并设置到所有的Volume上
       volumes.addBlockPool(bpid, conf);
-      // 初始化了一个map 存放 bpid - ReplicaInfo
+      // 初始化了一个map 存放 bpid -> blockId -> ReplicaInfo
       volumeMap.initBlockPool(bpid);
     }
+    // 初始化所有volumes下的block
     volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
   }
 

@@ -489,7 +489,7 @@ public class VolumeScanner extends Thread {
     try {
       long monotonicMs = Time.monotonicNow();
       expireOldScannedBytesRecords(monotonicMs);
-
+      // 判断是否需要扫描
       if (!calculateShouldScan(volume.getStorageID(), conf.targetBytesPerSec,
           scannedBytesSum, startMinute, curMinute)) {
         // If neededBytesPerSec is too low, then wait few seconds for some old
@@ -502,6 +502,7 @@ public class VolumeScanner extends Thread {
         block = suspectBlock;
       } else {
         if ((curBlockIter == null) || curBlockIter.atEnd()) {
+          // 通过.cursor文件定位当前需要等待多久进行扫描
           long timeout = findNextUsableBlockIter();
           if (timeout > 0) {
             LOG.trace("{}: no block pools are ready to scan yet.  Waiting " +
@@ -519,6 +520,7 @@ public class VolumeScanner extends Thread {
           return 0L;
         }
         try {
+          // 选择下一个要扫描的block
           block = curBlockIter.nextBlock();
         } catch (IOException e) {
           // There was an error listing the next block in the volume.  This is a
@@ -530,6 +532,7 @@ public class VolumeScanner extends Thread {
         }
         if (block == null) {
           // The BlockIterator is at EOF.
+          // block扫描完成，记录cursor文件
           LOG.info("{}: finished scanning block pool {}",
               this, curBlockIter.getBlockPoolId());
           saveBlockIterator(curBlockIter);
@@ -538,12 +541,14 @@ public class VolumeScanner extends Thread {
       }
       if (curBlockIter != null) {
         long saveDelta = monotonicMs - curBlockIter.getLastSavedMs();
+        // 达到存储间隔，save cursor文件
         if (saveDelta >= conf.cursorSaveMs) {
           LOG.debug("{}: saving block iterator {} after {} ms.",
               this, curBlockIter, saveDelta);
           saveBlockIterator(curBlockIter);
         }
       }
+      // 调用scanBlock方法来扫描block长度,其实是用BlockSender做了一次长度计算
       bytesScanned = scanBlock(block, conf.targetBytesPerSec);
       if (bytesScanned >= 0) {
         scannedBytesSum += bytesScanned;
